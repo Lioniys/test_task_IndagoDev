@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+
+  web:
+    build: .
+    command: ["/app/run.sh"]
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./.env
+    depends_on:
+      - db
+#      - cache
+    restart: always
+
+  db:
+    image: postgres:12.0-alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    env_file:
+      - ./.env
+    restart: always
+
+  celery_broker:
+    container_name: celery_broker
+    image: redis:7.0-alpine
+    restart: always
+
+  celery_beat:
+    container_name: celery_beat
+    build: .
+    command: ['celery', '--workdir=./src', '-A', 'src', 'beat', '-l', 'DEBUG']
+    depends_on:
+      - celery_broker
+    restart: always
+
+  worker:
+    container_name: worker
+    build: .
+    command: ['celery', '--workdir=./src', '-A', 'src', 'worker', '-l', 'INFO']
+    depends_on:
+      - celery_broker
+    restart: always
+
+#  flower:
+#    container_name: flower
+#    build: .
+#    command: ['celery', '--workdir=./src', '-A', 'src', 'flower']
+#    ports:
+#      - "5555:5555"
+#    depends_on:
+#      - celery_broker
+#    restart: always
+
+#  cache:
+#    container_name: cache
+#    image: redis:7.0-alpine
+#    volumes:
+#      - cache:/data
+#    restart: always
+
+#  nginx:
+#    build: ./nginx
+#    volumes:
+#      - static_volume:/home/app/web/static
+#      - media_volume:/home/app/web/media
+#    ports:
+#      - "80:80"
+#    depends_on:
+#      - web
+#    restart: always
+
+volumes:
+   postgres_data:
+#  static_volume:
+#  media_volume:
+#  cache:
+
